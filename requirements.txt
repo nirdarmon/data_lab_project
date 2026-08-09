@@ -1,10 +1,14 @@
 # Concrete crack segmentation - project dependencies.
 # Versions are the ones the notebook was actually executed with, on
 # Python 3.14.6 (conda env "kaggle"), Windows 11, NVIDIA RTX 3060 Laptop 6 GB.
+#
+# Install with:  pip install -r requirements.txt
+# The line below adds PyTorch's CUDA 12.6 wheel index alongside PyPI so the
+# +cu126 torch/torchvision builds resolve; everything else comes from PyPI.
+--extra-index-url https://download.pytorch.org/whl/cu126
 
 # --- Deep learning -----------------------------------------------------------
-# Installed from the CUDA 12.6 wheel index, NOT from PyPI defaults:
-#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu126
+# The +cu126 builds live ONLY on the index above, not on PyPI.
 # A CPU-only torch will still run the notebook, just far slower.
 torch==2.13.0+cu126
 
