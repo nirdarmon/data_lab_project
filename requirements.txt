@@ -40,7 +40,7 @@ nbconvert==7.17.1        # exporting the executed notebook to the submitted HTML
 # Kept because they are part of the environment as built, and because the final
 # report plans to use them. Nothing in proposal.ipynb needs them today.
 torchvision==0.28.0+cu126  # comes with the torch install line above
-plotly==6.9.0              # interactive embedding scatter, unused so far
+plotly==6.9.0              # interactive t-SNE explorer in the EDA chapter
 shap==0.52.0               # chapter 12 lists SHAP as planned work
 
 # --- Optional: needed only by drafts/proposal_extended.ipynb -----------------
