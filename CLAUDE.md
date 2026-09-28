@@ -42,8 +42,9 @@ examples/                          two previous students' notebooks, size/style
 CLAUDE.md  README.md  requirements.txt
 project_guideline.md               course requirements (Hebrew) - do not edit
 data/
-  concrete_crack_segmentation/     rgb/ and BW/, 458 pairs. Untracked.
-  concreteCrackSegmentationDataset.rar   original archive (TRUNCATED, see below)
+  concrete_crack_segmentation/     rgb/ and BW/, extracted from the .rar by Claude
+  concreteCrackSegmentationDataset.rar   the data source, complete (see below)
+  jwsn7tfbrp-1.zip                  Mendeley download - holds the TRUNCATED rar
 outputs/                           generated artifacts, untracked except split.csv
 docs/CODE_GUIDE.md                 study/presentation guide
 .claude/rules/                     working rules
@@ -114,9 +115,29 @@ containing both, so it does not depend on that exact name.
   0.063, full RGB 0.106. Decoding is never the bottleneck; per-patch features and
   training are.
 
-`data/concreteCrackSegmentationDataset.rar` is the **first, truncated download**
-(7-Zip reports "Unexpected end of archive"; it holds only 446 rgb files). It is kept
-only as a record and is safe to delete. The extracted folder is the good copy.
+**How the data gets onto disk.** The team keeps the dataset as
+`data/concreteCrackSegmentationDataset.rar`. **Claude extracts it** into
+`data/concrete_crack_segmentation/{rgb,BW}` whenever those folders are missing or
+empty - check the counts before any notebook run and extract without asking. The
+whole `data/` folder is gitignored (`.gitignore` line 2), so the archive and the
+extracted images never reach git - no extra ignore rule is needed. Do not re-download.
+The archive root holds `BW/` and `rgb/` directly, so extract with (`-aos` skips files
+already present):
+
+```bash
+"/c/Program Files/7-Zip/7z.exe" x data/concreteCrackSegmentationDataset.rar -odata/concrete_crack_segmentation -aos
+```
+
+Verify by counting files: `rgb/` and `BW/` must each hold 458.
+
+**The archive is complete (replaced 2026-09-28).** `7z t` passes with 916 files
+(458 rgb + 458 BW); after extraction every file decodes, 458/458 pairs, 0 orphans,
+content alignment 458/458 at mean 68.1, EXIF counts as listed above.
+
+**Beware Mendeley's own download.** `data/jwsn7tfbrp-1.zip` (the Mendeley "Download
+All") wraps a `.rar` of exactly 714,931,556 bytes - the same truncated file as before:
+"Unexpected end of archive", only 446 rgb (595, 596, 600, 602-610 absent) and
+`593.JPG` cut short. Never replace the good 745,914,150-byte `.rar` with it.
 
 The 40,000-image classification set commonly used for this topic was cropped from
 these same photos but ships labels without masks, which is why we cut our own aligned
@@ -209,9 +230,19 @@ which. One `PROPOSAL_SUBSET_N` constant controls it; the final project raises it
 - **All code lives in `proposal.ipynb`.** No `src/` package - chosen so the grader
   sees every line. Helpers go in cells near the top of their chapter.
 - English-only markdown, technical, not high-level.
-- Patches are **not** written to disk. `outputs/patch_index.parquet` holds one row per
-  patch (`image_id`, `split`, `y0`, `x0`, `size`, `crack_pixels`, `crack_ratio`,
+- Patches are **not** written to disk. `outputs/patch_index_<hash>.parquet` holds one
+  row per patch (`image_id`, `split`, `y0`, `x0`, `size`, `crack_pixels`, `crack_ratio`,
   descriptors) and crops are taken lazily from the source images.
+- **Caching in `final.ipynb`.** `build_cache_path()` (cell 5) names a cache file in
+  `outputs/` by a hash of every parameter that shapes it. Four flags at the top of cell 5,
+  each loading its cache only if a matching file exists (otherwise the step runs and
+  writes it; `False` always recomputes and overwrites):
+  `USE_CACHED_PATCH_TABLE` (`patch_index_<hash>.parquet`),
+  `LOAD_TRAINED_LOGISTIC_REGRESSION` (`logistic_regression_<hash>.joblib`),
+  `USE_CACHED_BASELINE_SCORES` (`val_scores_<method>_<hash>.json`, the val-grid scores
+  and pixel counts of Background, Otsu, Black-hat and Logistic Regression), and
+  `LOAD_TRAINED_UNET` (`unet_<hash>.pt`, best weights + training history). Code is not in
+  the key - after editing a method's code, delete its file in `outputs/`.
 - Data is never re-downloaded; a `resolve_data_root()` helper globs for the folder.
 - Patch size 256x256, stride 256 for val/test grids.
 - Notebook is committed **with outputs** - the submission must be rendered. Do not
