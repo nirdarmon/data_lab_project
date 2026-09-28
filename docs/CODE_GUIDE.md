@@ -502,8 +502,8 @@ The proposal is scoped deliberately. We show one classical baseline, one simple 
 baseline and one deep model, plus one dimensionality-reduction comparison and one
 clustering method. Adding UMAP, DBSCAN, a random forest and cross-validation would have
 made the proposal the size of a finished project without changing a single conclusion.
-The extended exploration is kept in `drafts/proposal_extended.ipynb`, and the final
-report expands from there.
+The final report (`final.ipynb`) grows from the proposal, addressing the points in
+`teacher_review.md`.
 
 **"How do you know your masks are aligned?"**
 Two independent guarantees. Structurally, image and mask are cropped in the same call

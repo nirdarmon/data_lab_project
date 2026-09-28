@@ -38,10 +38,12 @@ containing both `rgb/` and `BW/`.
 ## Repository layout
 
 ```
-proposal.ipynb                  the proposal - this is the submission
-drafts/proposal_extended.ipynb  longer draft, kept as the skeleton for the final report
+proposal.ipynb                  the proposal - submitted and approved
+proposal.html                   rendered export of the proposal
+final.ipynb                     the final report; starts as a copy of the proposal
 requirements.txt
 project_guideline.md            course requirements (Hebrew), supplied by the workshop
+teacher_review.md               supervisor feedback on the proposal; scope of the final report
 data/                           dataset, untracked
 examples/                       reference notebooks, untracked
 outputs/                        generated artifacts, untracked except split.csv

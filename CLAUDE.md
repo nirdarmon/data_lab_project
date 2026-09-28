@@ -33,8 +33,10 @@ Research question: can we automatically localize cracks in concrete at pixel lev
 
 ```
 proposal.ipynb                     THE DELIVERABLE - 58 cells, proposal-sized
-drafts/proposal_extended.ipynb     109-cell long version; the skeleton the FINAL
-                                   report grows from. Not submitted.
+proposal.html                      rendered export of the proposal
+final.ipynb                        the final report; starts as a copy of the proposal
+teacher_review.md                  supervisor feedback (Hebrew + English action items).
+                                   The final report fixes ONLY what it lists.
 examples/                          two previous students' notebooks, size/style
                                    reference only. Gitignored - not ours to share.
 CLAUDE.md  README.md  requirements.txt
@@ -57,7 +59,7 @@ notebooks in `examples/` (both are *completed final projects*):
 |---|---|---|---|---|
 | Prostate Cancer (final) | 165 | 85 | 1071 | 5,309 |
 | Data Sciense Project (final) | 519 | 297 | 2037 | 11,482 |
-| `drafts/proposal_extended.ipynb` | 109 | 45 | 1133 | 8,575 |
+| extended draft (deleted) | 109 | 45 | 1133 | 8,575 |
 | **`proposal.ipynb`** | **47** | **18** | **603** | **2,355** |
 
 The extended draft matched a finished project by volume, which is why it was replaced.

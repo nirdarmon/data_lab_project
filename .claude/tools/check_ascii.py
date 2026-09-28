@@ -17,7 +17,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]   # .claude/tools/ -> .claude/ -> repo
 
 # Files that are allowed to contain non-ASCII (exception 1 in the rule).
-EXEMPT_FILES = {"project_guideline.md"}
+EXEMPT_FILES = {"project_guideline.md", "teacher_review.md"}
 
 SCAN_SUFFIXES = {".md", ".py", ".txt", ".ipynb", ".json", ".yml", ".yaml", ".cfg"}
 
