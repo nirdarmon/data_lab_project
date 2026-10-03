@@ -332,17 +332,18 @@ a quick smoke run). The proposal used `PROPOSAL_SUBSET_N` = 60.
 
 | # | Item | Owner |
 |---|---|---|
-| 1 | Justify the loss; consider Tversky / Focal Tversky; answer his closing question | teammates |
+| 1 | Loss for extreme imbalance - DONE 2026-10-03 as prose only: KEEP BCE + soft Dice (no Tversky retrain). Cell 42 of `final.ipynb` answers his closing question, explains each term under 98.6% background, and why not Tversky (alpha = beta = 0.5 is Dice; the val threshold already trades precision for recall with flat Dice; Tversky left as future work for faint hairlines) | Nir (with Claude) |
 | 2 | Fixed crack:background train patch ratio - DONE 2026-10-03 as prose only: the team KEEPS 50/50 (8,315 + 8,315; no 60/40 retrain). The proposal only said "a similar number", so the supervisor missed it; cells 20 and 44 of `final.ipynb` now state and justify it (flat threshold curves, 29 of 8,315 background patches hold a 1-49 px sliver, balanced set is 4.7% crack pixels) | Nir (with Claude) |
 | 3 | Pretrained encoder: ResNet34 U-Net vs plain U-Net - DONE 2026-10-03 (chapter 11.4, prose written from the full run) | Nir (with Claude) |
 | 4 | Post-processing (closing, small-component removal, skeleton) and its Dice/IoU effect | teammates |
 
-Item 1 changes how the U-Nets are trained, so both U-Nets must be retrained under the
-final loss before the last render, or the comparison is unfair.
+Items 1 and 2 were closed in prose, so no retrain is planned: the current
+checkpoints, validation and test outputs are final unless item 4 or a new decision
+changes training.
 
 Also open:
-- Test evaluation DONE (chapter 14, 2026-10-03), prose written from the run. It must be
-  re-run, and its prose refreshed, after the final retrain for item 1.
+- Test evaluation DONE (chapter 14, 2026-10-03), prose written from the run. Re-run it,
+  and refresh its prose, only if training ever changes.
   Chapters 15-17 are Tools / Limitations / Summary and conclusions.
 - `docs/CODE_GUIDE.md` still describes the proposal.
 - The builder scripts are gone; edit notebooks directly (`NotebookEdit` or a JSON
