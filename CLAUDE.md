@@ -32,9 +32,10 @@ Research question: can we automatically localize cracks in concrete at pixel lev
 ## Repository layout
 
 ```
-proposal.ipynb                     THE DELIVERABLE - 58 cells, proposal-sized
+proposal.ipynb                     Stage 1, submitted and APPROVED - frozen, do not edit
 proposal.html                      rendered export of the proposal
-final.ipynb                        the final report; starts as a copy of the proposal
+final.ipynb                        THE CURRENT DELIVERABLE - the final report (Stage 2),
+                                   rendered on the full train+val data
 teacher_review.md                  supervisor feedback (Hebrew + English action items).
                                    The final report fixes ONLY what it lists.
 examples/                          two previous students' notebooks, size/style
@@ -61,7 +62,13 @@ notebooks in `examples/` (both are *completed final projects*):
 | Prostate Cancer (final) | 165 | 85 | 1071 | 5,309 |
 | Data Sciense Project (final) | 519 | 297 | 2037 | 11,482 |
 | extended draft (deleted) | 109 | 45 | 1133 | 8,575 |
-| **`proposal.ipynb`** | **47** | **18** | **603** | **2,355** |
+| `proposal.ipynb` (as first written) | 47 | 18 | 603 | 2,355 |
+| `proposal.ipynb` (as submitted) | 68 | 26 | 2,653 | 5,411 |
+| `final.ipynb` (2026-09-28 render) | 68 | 26 | 2,807 | 5,621 |
+
+Code lines are inflated by the one-argument-per-line formatting; the submitted
+proposal and the final report are close in size because the final report so far
+mostly re-ran the proposal on full data. The size cap applied to the proposal only.
 
 The extended draft matched a finished project by volume, which is why it was replaced.
 Keep `proposal.ipynb` at roughly half a final project. Markdown cells stay **3-6
@@ -85,7 +92,9 @@ Deliberately cut, and they stay cut unless the supervisor asks:
 **Do not shrink the U-Net.** It stays four levels / 483k parameters. Depth is the
 receptive field, and "context is what the deep model contributes" is the project's
 central claim - cutting levels would undercut the argument and invalidate the verified
-0.867. Model capacity is not write-up complexity.
+0.867 (0.882 on full data). Model capacity is not write-up complexity. The pretrained
+ResNet34 U-Net (supervisor item 3) is added **next to** it as a comparison, not as a
+replacement.
 
 ## Dataset - verified facts, do not re-derive
 
@@ -145,7 +154,8 @@ patches.
 
 ## Environment
 
-conda env `kaggle`, Python 3.14.6, torch 2.13.0+cu126, CUDA working on an RTX 3060
+conda env `kaggle`, Python 3.14.6, torch 2.13.0+cu126, torchvision 0.28.0+cu126
+(source of the pretrained ResNet34), CUDA working on an RTX 3060
 Laptop (6 GB). Also: opencv 5.0.0, scikit-image 0.26.0, scikit-learn 1.9.0,
 pandas 3.0.5, numpy 2.4.6, pyarrow, imagehash, umap-learn 0.5.12, shap 0.52.0,
 plotly 6.9.0. See `requirements.txt`.
@@ -201,17 +211,72 @@ patches it labels 44.1% of pixels as crack versus 16.0% on cracked ones.
 
 RandomForest is 8x slower than LogReg at inference (308 s vs 39 s for validation).
 
+### Full-data results (`final.ipynb`, rendered 2026-09-28)
+
+All 389 train+val images -> 63,330 patches (83.6% empty). Val grid: 69 images,
+11,271 patches, 83.5% empty. U-Net trains on 16,630 balanced patches (8,315 crack +
+8,315 empty), 20 epochs at ~145 s/epoch, best epoch 18, threshold 0.50 (the Dice curve
+is flat within ~0.02 over 0.1-0.9). Logistic Regression trains on the same 8,315 + 8,315.
+
+| Method (validation, micro) | Dice | IoU |
+|---|---|---|
+| Background | 0.000 | 0.000 |
+| Otsu | 0.046 | 0.023 |
+| Black-hat | 0.465 | 0.303 |
+| Logistic Regression | 0.615 | 0.444 |
+| U-Net (482,737 params) | 0.882 | 0.789 |
+| ResNet34 U-Net (24,436,241 params, ImageNet encoder) | **0.898** | **0.815** |
+
+U-Net precision 0.897 / recall 0.868. LogReg and U-Net have equal recall (86.8%); the
+U-Net wins by ~10x fewer false-positive pixels. Background scores macro Dice 0.835 while
+predicting nothing. Main U-Net failure: missed faint hairlines (worst five patches
+Dice 0.00). On the 1,332 substantial-crack val patches, mean per-patch Dice is
+Black-hat 0.511, LogReg 0.806, U-Net 0.896, ResNet34 U-Net 0.908. Test split still
+untouched.
+
+ResNet34 U-Net (supervisor item 3, run 2026-10-01): torchvision `IMAGENET1K_V1`
+encoder (21.3M) + new decoder (3.2M); encoder frozen epochs 1-2 (BN in eval), then
+fine-tuned at 1e-4 vs decoder 1e-3, same cosine schedule / batches / loss / epochs as
+the plain U-Net via the shared `train_or_load_segmentation_network`. Frozen epochs
+reach only val Dice 0.760 / 0.736 (below the plain U-Net); unfreezing jumps to 0.861.
+Best epoch 19, threshold 0.60, precision 0.916 / recall 0.881; ahead of the plain U-Net
+at every epoch from 7 on. vs plain U-Net: +136,592 TP pixels, -183,074 FP (-18.5%).
+Same-patch figure: equal on wide breaks, still blind on faint hairlines (0.15 vs 0.01
+on one, 0.00 both on the other). Cost: ~145 s frozen / 190-210 s fine-tuning epochs,
+~64 min total vs ~48, weights 98 MB vs 2 MB. One seed per network - no variance
+estimate. Best/worst examples and occlusion stay on the plain U-Net.
+
+### Held-out test results (`final.ipynb` chapter 14, run 2026-10-03)
+
+Test grid: 69 images, 11,100 patches, 83.2% without a crack (val 83.9%), 1.44% crack
+pixels (val 1.34%). Scored once with all settings frozen from train/val.
+
+| Method | Val Dice | Test Dice | Test IoU |
+|---|---|---|---|
+| Background | 0.000 | 0.000 | 0.000 (98.6% accuracy, macro Dice 0.827) |
+| Otsu | 0.046 | 0.048 | 0.024 |
+| Black-hat | 0.465 | 0.486 | 0.321 |
+| Logistic Regression | 0.615 | 0.660 | 0.493 |
+| U-Net | 0.882 | 0.870 | 0.770 |
+| ResNet34 U-Net | 0.898 | **0.886** | **0.795** |
+
+Both U-Nets drop exactly 0.012 (val selection of epoch + threshold); non-deep methods
+rise (no val selection; more crack favours over-predictors - LogReg precision
+0.476 -> 0.542). The pretrained gain is again 0.016 on test (+211,310 TP, -93,917 FP).
+
 ## Compute tiering
 
 Cheap steps run on everything, expensive steps on a subset, and every table says
-which. One `PROPOSAL_SUBSET_N` constant controls it; the final project raises it.
+which. In `final.ipynb` one `PATCH_STAGE_SOURCE_IMAGE_COUNT` constant controls it
+(`None` = all 389 train+val images, used for the rendered report; a small number gives
+a quick smoke run). The proposal used `PROPOSAL_SUBSET_N` = 60.
 
 | Tier | Scope | What |
 |---|---|---|
 | 0-1 | **all 458** | Pairing, EXIF scan, resolutions, per-image crack ratio and mask histogram |
 | 2 | **all 458** | The train/val/test split |
-| 3 | ~60 images | Patch generation, metadata table, EDA, PCA/t-SNE/UMAP, clustering |
-| 4 | subset | Classical baseline, per-pixel sklearn baseline, U-Net smoke-train |
+| 3 | train+val (60 in the proposal) | Patch generation, metadata table, EDA, PCA/t-SNE/UMAP, clustering |
+| 4 | train+val (60 in the proposal) | Classical baseline, per-pixel sklearn baseline, U-Net smoke-train |
 
 ## How the rubric is covered without a second task
 
@@ -221,27 +286,30 @@ which. One `PROPOSAL_SUBSET_N` constant controls it; the final project raises it
 | 6 cleaning, leakage | Stem pairing, EXIF fix, binarization, near-duplicate grouping, group split |
 | 7 EDA, PCA/t-SNE/UMAP, clustering | Run on patch descriptors; clusters reused as **evaluation strata** (Dice per visual regime) |
 | 8 simple + advanced models | Simple = classical thresholding and the per-pixel sklearn filter-bank model; advanced = U-Net. Both output masks. |
-| 9 CV, confusion matrix | GroupKFold by `source_image_id` on the pixel baseline; **pixel-level** confusion matrix |
+| 9 evaluation, confusion matrix | Train/val Dice curves, val vs held-out **test** (chapter 14), **pixel-level** confusion matrices. No cross-validation in `final.ipynb` - chapter 14 explains why (k retrains per U-Net; the group split already guards against a lucky split) |
 | 11 explainability | Permutation importance / SHAP over filter-bank features; occlusion sensitivity for U-Net |
 
 ## Locked-in decisions (do not re-litigate)
 
 - Segmentation only. No classification task.
-- **All code lives in `proposal.ipynb`.** No `src/` package - chosen so the grader
+- **All code lives in the notebook** (`final.ipynb` now). No `src/` package - chosen so the grader
   sees every line. Helpers go in cells near the top of their chapter.
 - English-only markdown, technical, not high-level.
 - Patches are **not** written to disk. `outputs/patch_index_<hash>.parquet` holds one
   row per patch (`image_id`, `split`, `y0`, `x0`, `size`, `crack_pixels`, `crack_ratio`,
   descriptors) and crops are taken lazily from the source images.
 - **Caching in `final.ipynb`.** `build_cache_path()` (cell 5) names a cache file in
-  `outputs/` by a hash of every parameter that shapes it. Four flags at the top of cell 5,
+  `outputs/` by a hash of every parameter that shapes it. Six flags at the top of cell 5,
   each loading its cache only if a matching file exists (otherwise the step runs and
   writes it; `False` always recomputes and overwrites):
   `USE_CACHED_PATCH_TABLE` (`patch_index_<hash>.parquet`),
   `LOAD_TRAINED_LOGISTIC_REGRESSION` (`logistic_regression_<hash>.joblib`),
   `USE_CACHED_BASELINE_SCORES` (`val_scores_<method>_<hash>.json`, the val-grid scores
-  and pixel counts of Background, Otsu, Black-hat and Logistic Regression), and
-  `LOAD_TRAINED_UNET` (`unet_<hash>.pt`, best weights + training history). Code is not in
+  and pixel counts of Background, Otsu, Black-hat and Logistic Regression),
+  `LOAD_TRAINED_UNET` (`unet_<hash>.pt`, best weights + training history),
+  `LOAD_TRAINED_PRETRAINED_UNET` (`unet_resnet34_<hash>.pt`, same contents), and
+  `USE_CACHED_TEST_SCORES` (`test_scores_<hash>.json`, all six methods on the test grid,
+  keyed on both checkpoints and thresholds). Code is not in
   the key - after editing a method's code, delete its file in `outputs/`.
 - Data is never re-downloaded; a `resolve_data_root()` helper globs for the folder.
 - Patch size 256x256, stride 256 for val/test grids.
@@ -252,31 +320,37 @@ which. One `PROPOSAL_SUBSET_N` constant controls it; the final project raises it
 
 1. Scaffolding, rules, CLAUDE.md - DONE.
 2. Analysis code developed and verified as scripts - DONE (all stages incl. U-Net).
-3. `proposal.ipynb` written - DONE. 47 cells (29 markdown, 18 code). **Not executed
-   by Claude - the team runs it.** Statically validated: every cell compiles, the 18
-   code cells compile as one concatenated script, no undefined names, nbformat valid.
-4. `docs/CODE_GUIDE.md` - DONE and kept in sync with the lean notebook.
-5. Final report (Stage 2) - later, after supervisor feedback.
+3. `proposal.ipynb` - DONE, rendered end to end, submitted with names, **approved**
+   by the supervisor (`teacher_review.md`). Frozen from here on.
+4. `docs/CODE_GUIDE.md` - written for the proposal; needs a pass for `final.ipynb`.
+5. Final report `final.ipynb` (Stage 2) - IN PROGRESS. Done: full-data run with
+   caching, text refreshed to the full-data numbers (commit `54c8617`); pretrained
+   ResNet34 U-Net comparison (76 cells). Full renders are started by the team, not
+   Claude - Claude smoke-tests first (6 images, 3 epochs, scratchpad caches).
 
-### Still open
+### Still open - the four supervisor items (`teacher_review.md`)
 
-- Submitter names and IDs are placeholders in cell 0 of `proposal.ipynb`.
-- **The notebook has never been run end to end.** Every stage was verified as a
-  standalone script first, so the code is exercised, but the assembled notebook has
-  not been rendered.
-- `proposal.ipynb` is now the source of truth. The builder scripts lived in the session
-  scratchpad and are gone; use `NotebookEdit` for further changes.
-- Nothing has been committed to git yet.
+| # | Item | Owner |
+|---|---|---|
+| 1 | Justify the loss; consider Tversky / Focal Tversky; answer his closing question | teammates |
+| 2 | Fixed crack:background train patch ratio (he suggests 60/40) | teammates |
+| 3 | Pretrained encoder: ResNet34 U-Net vs plain U-Net - DONE 2026-10-03 (chapter 11.4, prose written from the full run) | Nir (with Claude) |
+| 4 | Post-processing (closing, small-component removal, skeleton) and its Dice/IoU effect | teammates |
 
-### Expected numbers when it is run
+Items 1 and 2 change how the U-Nets are trained, so both U-Nets must be retrained
+under the final loss and ratio before the last render, or the comparison is unfair.
 
-Verified from the standalone scripts (SEED=42, 60-image subset): classical baseline
-~0.41 micro Dice, per-pixel LogisticRegression ~0.57, U-Net ~0.85-0.87 at ~15 s/epoch.
-The prose in the notebook hedges these with "about", so small drift is fine.
+Also open:
+- Test evaluation DONE (chapter 14, 2026-10-03), prose written from the run. It must be
+  re-run, and its prose refreshed, after the final retrain for items 1 and 2.
+  Chapters 15-17 are Tools / Limitations / Summary and conclusions.
+- `docs/CODE_GUIDE.md` still describes the proposal.
+- The builder scripts are gone; edit notebooks directly (`NotebookEdit` or a JSON
+  script that keeps cell ids and trailing newlines).
 
 ### Gotchas that already cost a failed run
 
-**1. Import order in cell 1 is load-bearing. Do not "tidy" it.**
+**1. Import order in the imports cell (cell 5 of `final.ipynb`) is load-bearing. Do not "tidy" it.**
 scikit-image and scikit-learn link Intel OpenMP via MKL, and so does PyTorch. If
 `torch` is imported first, a later `from skimage.feature import ...` **kills the
 kernel**:
@@ -289,7 +363,7 @@ nbconvert reports this only as `DeadKernelError: Kernel died`, with no traceback
 no indication of which cell. Fix: import numpy/pandas, then skimage/sklearn/umap, then
 cv2/matplotlib, and **torch last**. Verified: skimage-before-torch works;
 skimage-after-torch aborts. The `KMP_DUPLICATE_LIB_OK=TRUE` override also works but is
-officially unsafe, so we rely on ordering instead. All imports live in cell 1; do not
+officially unsafe, so we rely on ordering instead. All imports live in that cell; do not
 add local imports to later cells.
 
 **2. `nbformat` needs each `source` line to keep its trailing newline.**
